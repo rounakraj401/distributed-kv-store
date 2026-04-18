@@ -1,5 +1,7 @@
 package com.rounak.node_service.controller;
 
+import com.rounak.node_service.storage.StorageEngine;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -9,12 +11,13 @@ import java.util.Map;
 @RequestMapping("/internal")
 public class NodeController {
 
-    private final Map<String, String> storage = new ConcurrentHashMap<>();
+    @Autowired
+    private StorageEngine storageEngine;
 
     @PostMapping("/data")
     public String put(@RequestParam String key,
                       @RequestParam String value) {
-        storage.put(key, value);
+        storageEngine.put(key, value);
         return "Stored";
     }
 
@@ -25,12 +28,13 @@ public class NodeController {
 
     @GetMapping("/data")
     public String get(@RequestParam String key) {
-        return storage.getOrDefault(key, "Not found");
+        String value = storageEngine.get(key);
+        return value != null ? value : "Not found";
     }
 
     @DeleteMapping("/data")
     public String delete(@RequestParam String key) {
-        storage.remove(key);
+        storageEngine.remove(key);
         return "Deleted";
     }
 }

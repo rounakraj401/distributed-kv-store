@@ -206,9 +206,6 @@ public class HashRingService {
 
             long hash = HashUtil.hash(key);
 
-            //duplicates handled by Set
-            keys.add(key);
-
             // get first node (primary)
             Map.Entry<Long, Node> entry = ring.ceilingEntry(hash);
 
@@ -279,7 +276,7 @@ public class HashRingService {
         }
 
         // QUORUM CHECK
-        if (successNodes.size() < WRITE_QUORUM) {
+        if (nodes.size()>1 && successNodes.size() < WRITE_QUORUM) {
 
             System.out.println("Quorum not met. Rolling back...");
 
@@ -293,6 +290,9 @@ public class HashRingService {
 
             return "Write failed (quorum not met)";
         }
+
+        //duplicates handled by Set
+        keys.add(key);
 
         return "Write successful on nodes: " +
                 successNodes.stream().map(Node::getId).toList();
@@ -327,7 +327,7 @@ public class HashRingService {
                             valueCount.getOrDefault(response, 0) + 1);
 
                     //QUORUM READ HIT
-                    if (valueCount.get(response) >= READ_QUORUM) {
+                    if (nodes.size()>1 && valueCount.get(response) >= READ_QUORUM) {
                         return response + " (from " + node.getId() + ")" + " , quorom met";
                     }
                 }
