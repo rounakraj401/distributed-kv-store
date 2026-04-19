@@ -1,0 +1,6 @@
+# node-service/.dockerignore  (same for consistent-hashing/)
+target/
+.idea/
+*.iml
+data/
+.mvn/

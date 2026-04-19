@@ -3,22 +3,6 @@ package com.rounak.consistent_hashing.model;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 
-//@Entity
-//public class NodeEntity {
-//
-//    @Id
-//    private String id;
-//
-//    public NodeEntity() {}
-//
-//    public NodeEntity(String id) {
-//        this.id = id;
-//    }
-//
-//    public String getId() {
-//        return id;
-//    }
-//}
 @Entity
 public class NodeEntity {
 

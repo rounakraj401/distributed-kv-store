@@ -39,8 +39,8 @@ public class HashRingService {
     private final ReadWriteLock ringLock = new ReentrantReadWriteLock();
 
     private final int REPLICATION_FACTOR = 3;
-    private final int WRITE_QUORUM = (REPLICATION_FACTOR / 2) + 1; // 2
-    private final int READ_QUORUM = (REPLICATION_FACTOR / 2) + 1;  // 2
+    private final int WRITE_QUORUM = (REPLICATION_FACTOR / 2) + 1;
+    private final int READ_QUORUM = (REPLICATION_FACTOR / 2) + 1;
 
     @Scheduled(fixedRate = 5000)
     public void checkNodeHealth() {

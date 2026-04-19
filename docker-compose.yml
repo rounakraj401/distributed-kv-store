@@ -1,0 +1,50 @@
+services:
+
+  node1:
+    build: ./node-service
+    container_name: node1
+    environment:
+      NODE_ID: NodeA
+      PORT: 8081
+      DATA_DIR: /app/data
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./data/node1:/app/data
+
+  node2:
+    build: ./node-service
+    container_name: node2
+    environment:
+      NODE_ID: NodeB
+      PORT: 8082
+      DATA_DIR: /app/data
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./data/node2:/app/data
+
+  node3:
+    build: ./node-service
+    container_name: node3
+    environment:
+      NODE_ID: NodeC
+      PORT: 8083
+      DATA_DIR: /app/data
+    ports:
+      - "8083:8083"
+    volumes:
+      - ./data/node3:/app/data
+
+  router:
+    build: ./consistent-hashing
+    container_name: router
+    depends_on:
+      - node1
+      - node2
+      - node3
+    environment:
+      PORT: 8080
+      NODE_ADDRESSES: http://node1:8081,http://node2:8082,http://node3:8083
+    ports:
+      - "8080:8080"
