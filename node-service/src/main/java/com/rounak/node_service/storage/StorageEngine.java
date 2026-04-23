@@ -32,11 +32,11 @@ public class StorageEngine {
 
         ssTableManager.loadExistingFiles(); // detect existing SSTables
 
-        String basePath = System.getProperty("user.dir");
-
-        File file = new File(
-                basePath + "/data/" + nodeId + "/wal.log"
+        File nodeDir = new File(
+                System.getProperty("user.dir") + "/data/" + nodeId
         );
+
+        File file = new File(nodeDir, "wal.log");
 
         if (!file.exists()) {
             System.out.println("No WAL found");
@@ -56,7 +56,6 @@ public class StorageEngine {
                     memTable.put(parts[0], parts[1]);
                 }
             }
-
             System.out.println("Recovered " + memTable.size() + " entries from WAL");
 
         } catch (Exception e) {
@@ -74,11 +73,13 @@ public class StorageEngine {
 
         // 3. Flush
         if (memTable.size() >= THRESHOLD) {
+
+            System.out.println("MemTable full , flushing data into SStable.");
+
             ssTableManager.flush(memTable);
             memTable.clear();
             walManager.clear();
 
-            System.out.println("MemTable full , flushing data into SStable.\n");
             System.out.println("Flush completed. WAL cleared");
 
             if (ssTableManager.getFileCount() >= 3) {

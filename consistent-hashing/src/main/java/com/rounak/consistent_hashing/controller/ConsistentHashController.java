@@ -44,6 +44,11 @@ public class ConsistentHashController {
         return hashRingService.getData(key);
     }
 
+    @DeleteMapping("/data")
+    public String delete(@RequestParam String key) {
+        return hashRingService.removeData(key);
+    }
+
     @GetMapping("/full-mapping")
     public String fullMapping() {
         return hashRingService.getFullMapping();

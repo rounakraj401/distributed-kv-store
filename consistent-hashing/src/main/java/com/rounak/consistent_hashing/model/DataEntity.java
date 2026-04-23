@@ -14,10 +14,8 @@ public class DataEntity {
 
     public DataEntity() {}
 
-    public DataEntity(String key, String value, String nodeId) {
+    public DataEntity(String key) {
         this.dataKey = key;
-        this.dataValue = value;
-        this.nodeId = nodeId;
     }
 
     public String getKey() { return dataKey; }

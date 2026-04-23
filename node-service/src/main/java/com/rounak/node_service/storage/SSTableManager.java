@@ -69,7 +69,7 @@ public class SSTableManager {
 
             writer.close();
             System.out.println(nodeId +
-                    " flushed " + file.getName());
+                    " flushed data into " + file.getName());
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -80,14 +80,21 @@ public class SSTableManager {
 
         for (int i = fileIndex - 1; i >= 0; i--) {
 
-            File file = new File(getNodeDir(), "sstable_" + fileIndex++ + ".txt");
+            File file = new File(
+                    getNodeDir(),
+                    "sstable_" + i + ".txt"
+            );
 
-            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            if (!file.exists()) continue;
+
+            try (BufferedReader reader =
+                         new BufferedReader(new FileReader(file))) {
 
                 String line;
+
                 while ((line = reader.readLine()) != null) {
 
-                    String[] parts = line.split(":");
+                    String[] parts = line.split(":", 2);
 
                     if (parts[0].equals(key)) {
                         return parts[1];
@@ -108,13 +115,12 @@ public class SSTableManager {
         // 1. Read all SSTables (old → new)
         for (int i = 0; i < fileIndex; i++) {
 
-            File file = new File(getNodeDir(), "sstable_" + fileIndex++ + ".txt");
+            File file = new File(getNodeDir(), "sstable_" + i + ".txt");
 
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
 
                 String line;
                 while ((line = reader.readLine()) != null) {
-
                     String[] parts = line.split(":");
                     String key = parts[0];
                     String value = parts[1];

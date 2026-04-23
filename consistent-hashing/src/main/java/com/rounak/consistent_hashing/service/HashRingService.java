@@ -133,8 +133,9 @@ public class HashRingService {
     }
 
     @PostConstruct
-    public void loadNodes() {
+    public void loadStates() {
 
+        // Load nodes
         List<NodeEntity> nodes = nodeRepository.findAll();
 
         for (NodeEntity entity : nodes) {
@@ -143,6 +144,15 @@ public class HashRingService {
         }
 
         System.out.println("Loaded nodes from DB: " + nodes.size());
+
+        // Load keys
+        List<DataEntity> data = dataRepository.findAll();
+
+        for (DataEntity entity : data) {
+            keys.add(entity.getKey());
+        }
+
+        System.out.println("Loaded keys from DB: " + data.size());
     }
 
 
@@ -291,8 +301,10 @@ public class HashRingService {
             return "Write failed (quorum not met)";
         }
 
-        //duplicates handled by Set
-        keys.add(key);
+        if (!dataRepository.existsById(key)) {
+            keys.add(key);
+            dataRepository.save(new DataEntity(key));
+        }
 
         return "Write successful on nodes: " +
                 successNodes.stream().map(Node::getId).toList();
@@ -328,7 +340,7 @@ public class HashRingService {
 
                     //QUORUM READ HIT
                     if (nodes.size()>1 && valueCount.get(response) >= READ_QUORUM) {
-                        return response + " (from " + node.getId() + ")" + " , quorom met";
+                        return response + " (quorom met)";
                     }
                 }
 
@@ -341,6 +353,44 @@ public class HashRingService {
         }
         //No data anywhere
         return "Key not found";
+    }
+
+    public String removeData(String key) {
+
+        List<Node> nodes = getNodesForKey(key);
+
+        if (nodes.isEmpty()) {
+            return "No nodes available";
+        }
+
+        int success = 0;
+
+        for (Node node : nodes) {
+            try {
+
+                String url = node.getUrl() + "/internal/data?key=" + key;
+
+                executeWithRetry(() -> {
+                    restTemplate.delete(url);
+                    return null;
+                }, node.getId());
+
+                success++;
+
+            } catch (Exception e) {
+                System.out.println("Delete failed on " + node.getId());
+            }
+        }
+
+        if (success >= WRITE_QUORUM) {
+
+            keys.remove(key);
+            dataRepository.deleteById(key);
+
+            return "Deleted successfully (quorum met)";
+        }
+
+        return "Delete failed (quorum not met)";
     }
 
     public String getFullMapping() {
@@ -386,44 +436,72 @@ public class HashRingService {
     public void triggerRecovery(String recoveredNodeId) {
 
         System.out.println("Starting recovery for: " + recoveredNodeId);
-
         Node recoveredNode = getNodeById(recoveredNodeId);
 
         for (String key : keys) {
 
+            // Nodes that SHOULD contain this key now
             List<Node> correctNodes = getNodesForKey(key);
 
-            // Only recover if this node SHOULD store this key
             boolean shouldStore = correctNodes.stream()
                     .anyMatch(n -> n.getId().equals(recoveredNodeId));
 
-            if (!shouldStore) continue;
+            if (!shouldStore) {
+                continue;
+            }
 
-            // now find replica
-            for (Node node : correctNodes) {
+            try {
+                // STEP 1: Check if recovered node already has key
+                String existing = restTemplate.getForObject(
+                        recoveredNode.getUrl() +
+                                "/internal/data?key=" + key,
+                        String.class
+                );
 
-                if (!node.getId().equals(recoveredNodeId)) {
+                if (existing != null &&
+                        !existing.equals("Not found")) {
 
-                    try {
-                        String value = restTemplate.getForObject(
-                                node.getUrl() + "/internal/data?key=" + key,
+                    // already recovered locally (WAL / SSTable)
+                    continue;
+                }
+
+            } catch (Exception ignored) {}
+
+            // STEP 2: Fetch from healthy replica
+            for (Node replica : correctNodes) {
+
+                if (replica.getId().equals(recoveredNodeId)) {
+                    continue;
+                }
+
+                try {
+
+                    String value = restTemplate.getForObject(
+                            replica.getUrl() +
+                                    "/internal/data?key=" + key,
+                            String.class
+                    );
+
+                    if (value != null &&
+                            !value.equals("Not found")) {
+
+                        // STEP 3: Copy to recovered node
+                        restTemplate.postForObject(
+                                recoveredNode.getUrl()
+                                        + "/internal/data?key=" + key
+                                        + "&value=" + value,
+                                null,
                                 String.class
                         );
 
-                        if (value != null && !value.equals("Not found")) {
+                        System.out.println("Recovered key "
+                                + key + " from "
+                                + replica.getId());
 
-                            restTemplate.postForObject(
-                                    recoveredNode.getUrl() +
-                                            "/internal/data?key=" + key + "&value=" + value,
-                                    null,
-                                    String.class
-                            );
+                        break;
+                    }
 
-                            break;
-                        }
-
-                    } catch (Exception ignored) {}
-                }
+                } catch (Exception ignored) {}
             }
         }
 
