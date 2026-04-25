@@ -235,15 +235,3 @@ Node registry and key ownership metadata are persisted using **Spring Data JPA**
 | Concurrency         | ReadWriteLock + ConcurrentHashMap   | Fine-grained locking over coarse synchronisation |
 
 ---
-
-# 🌍 Real-World Parallels
-
-| This Project         | Production System               |
-| -------------------- | ------------------------------- |
-| Consistent Hashing   | DynamoDB, Cassandra             |
-| Quorum Reads/Writes  | Cassandra (R/W/N config)        |
-| Read Repair          | Cassandra Read Repair           |
-| Anti-Entropy         | Cassandra Anti-Entropy Service  |
-| LSM Engine + WAL     | RocksDB / LevelDB               |
-| SSTable Compaction   | LevelDB / Cassandra Compaction  |
-| Replica Catch-up     | Kafka ISR catch-up (conceptual) |
