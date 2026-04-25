@@ -157,16 +157,18 @@ public class HashRingService {
 
 
     @Transactional
-    public void addNode(Node node) {
+    public void addNode(Node node) throws InterruptedException {
         if (!nodeRepository.existsById(node.getId())) {
             nodeRepository.save(new NodeEntity(node.getId(), node.getUrl()));
         }
         nodeHealth.put(node.getId(), true);
         addNodeToRing(node);
         triggerRebalancing();
+        Thread.sleep(2000);
+        cleanupStaleReplicas();
     }
 
-    public void removeNodeById(String id) {
+    public void removeNodeById(String id) throws InterruptedException {
 
         NodeEntity entity = nodeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Node not found"));
@@ -176,8 +178,9 @@ public class HashRingService {
         nodeRepository.deleteById(id);
         // remove from ring
         removeNodeFromRing(node);
-
         triggerRebalancing();
+        Thread.sleep(2000);
+        cleanupStaleReplicas();
     }
 
     public void addNodeToRing(Node node) {
@@ -522,104 +525,113 @@ public class HashRingService {
 
         for (String key : keys) {
 
-            // Nodes that SHOULD store this key (new ring)
             List<Node> correctNodes = getNodesForKey(key);
 
-            //Ensure all correct nodes have data
             for (Node targetNode : correctNodes) {
 
                 try {
-                    //Check if already present
+
                     String existing = restTemplate.getForObject(
-                            targetNode.getUrl() + "/internal/data?key=" + key,
+                            targetNode.getUrl() +
+                                    "/internal/data?key=" + key,
                             String.class
                     );
 
-                    if (existing != null && !existing.equals("Not found")) {
-                        continue; // already correct
+                    if (existing != null &&
+                            !existing.equals("Not found")) {
+                        continue;
                     }
 
-                    //Find source node (any node that has data)
                     String value = null;
-                    Node sourceNodeUsed = null;
 
                     for (Node sourceNode : getUniqueNodes()) {
 
                         try {
+
                             String response = restTemplate.getForObject(
-                                    sourceNode.getUrl() + "/internal/data?key=" + key,
+                                    sourceNode.getUrl() +
+                                            "/internal/data?key=" + key,
                                     String.class
                             );
 
-                            if (response != null && !response.equals("Not found")) {
+                            if (response != null &&
+                                    !response.equals("Not found")) {
+
                                 value = response;
-                                sourceNodeUsed = sourceNode;
                                 break;
                             }
 
                         } catch (Exception ignored) {}
                     }
 
-                    if (value == null) continue; // no source found
+                    if (value == null) continue;
 
-                    //COPY to target node
                     restTemplate.postForObject(
-                            targetNode.getUrl() + "/internal/data?key=" + key + "&value=" + value,
+                            targetNode.getUrl()
+                                    + "/internal/data?key=" + key
+                                    + "&value=" + value,
                             null,
                             String.class
                     );
 
-                    //VERIFY copy
-                    String verify = restTemplate.getForObject(
-                            targetNode.getUrl() + "/internal/data?key=" + key,
-                            String.class
-                    );
-
-                    if (verify == null || verify.equals("Not found")) {
-                        System.out.println("Verification failed for key: " + key +
-                                " on node: " + targetNode.getId());
-                        continue;
-                    }
-
                     System.out.println("Copied " + key +
-                            " data to node: " + targetNode.getId());
+                            " to node: " + targetNode.getId());
 
                 } catch (Exception e) {
-                    System.out.println("Failed processing target node: " + targetNode.getId());
+
+                    System.out.println("Failed target node: "
+                            + targetNode.getId());
                 }
             }
+        }
 
-            //DELETE from nodes that should NOT have data
-            for (Node node : getUniqueNodes()){
+        System.out.println("Rebalancing completed");
+    }
+
+    @Async
+    public void cleanupStaleReplicas() {
+
+        System.out.println("Replica cleanup started...");
+
+        for (String key : keys) {
+
+            List<Node> correctNodes = getNodesForKey(key);
+
+            for (Node node : getUniqueNodes()) {
 
                 boolean shouldKeep = correctNodes.stream()
                         .anyMatch(n -> n.getId().equals(node.getId()));
 
-                if (!shouldKeep) {
+                if (shouldKeep) {
+                    continue;
+                }
 
-                    try {
-                        // Check if node has data
-                        String existing = restTemplate.getForObject(
-                                node.getUrl() + "/internal/data?key=" + key,
-                                String.class
+                try {
+
+                    String existing = restTemplate.getForObject(
+                            node.getUrl() +
+                                    "/internal/data?key=" + key,
+                            String.class
+                    );
+
+                    if (existing != null &&
+                            !existing.equals("Not found")) {
+
+                        restTemplate.delete(
+                                node.getUrl() +
+                                        "/internal/data?key=" + key
                         );
 
-                        if (existing != null && !existing.equals("Not found")) {
+                        System.out.println("Deleted stale copy of "
+                                + key + " from "
+                                + node.getId());
+                    }
 
-                            // DELETE
-                            restTemplate.delete(
-                                    node.getUrl() + "/internal/data?key=" + key
-                            );
-
-                            System.out.println("Deleted " + key +
-                                    " data from previous node: " + node.getId());
-                        }
-
-                    } catch (Exception ignored) {}
-                }
+                } catch (Exception ignored) {}
             }
         }
-        System.out.println("Rebalancing completed");
+
+        System.out.println("Replica cleanup completed");
     }
 
     private Set<Node> getUniqueNodes() {

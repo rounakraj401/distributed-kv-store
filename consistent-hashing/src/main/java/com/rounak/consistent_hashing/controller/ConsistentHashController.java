@@ -20,14 +20,14 @@ public class ConsistentHashController {
 
     @PostMapping("/node")
     public String addNode(@RequestParam String id,
-                          @RequestParam String url) {
+                          @RequestParam String url) throws InterruptedException {
 
         hashRingService.addNode(new Node(id, url));
         return "Node added :" + id;
     }
 
     @DeleteMapping("/node")
-    public String removeNode(@RequestParam String id) {
+    public String removeNode(@RequestParam String id) throws InterruptedException {
         System.out.println("node to be deleted: " + id);
         hashRingService.removeNodeById(id);
         return "Node removed: " + id;

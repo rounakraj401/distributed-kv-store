@@ -18,7 +18,7 @@ public class StartupLoader {
     private HashRingService hashRingService;
 
     @EventListener(ApplicationReadyEvent.class)
-    public void init() {
+    public void init() throws InterruptedException {
 
         if (nodeAddresses.isBlank()) return;
 
