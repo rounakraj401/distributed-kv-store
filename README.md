@@ -26,6 +26,29 @@ Each node runs an independent LSM-inspired storage engine with its own MemTable,
 
 ---
 
+# ⚡ Features Implemented
+
+* ✅ Consistent Hashing Ring (TreeMap-based)
+* ✅ Virtual Nodes
+* ✅ Replication (N copies)
+* ✅ Quorum Reads/Writes
+* ✅ Partial Write Rollback
+* ✅ Retry Mechanism
+* ✅ Node Health Check (Heartbeat)
+* ✅ Failover Handling
+* ✅ Data Rebalancing
+* ✅ Read Repair
+* ✅ Anti-Entropy Background Sync
+* ✅ Node Recovery
+* ✅ LSM-inspired Storage Engine
+* ✅ MemTable + SSTable
+* ✅ Write-Ahead Log (WAL) + Crash Recovery
+* ✅ Compaction + Tombstone Deletes
+* ✅ Thread-Safe Concurrency Model
+* ✅ Metadata Persistence (H2 + JPA)
+
+---
+
 # ⚙️ How It Works
 
 ## 🔹 Consistent Hashing
@@ -197,29 +220,6 @@ Node registry and key ownership metadata are persisted using **Spring Data JPA**
 | Key Registry       | H2 + JPA         | Tracks key-to-node ownership     |
 | Key-Value Data     | LSM Engine       | Actual stored values per node    |
 | Crash Recovery     | WAL Replay       | Restores writes lost on crash    |
-
----
-
-# ⚡ Features Implemented
-
-* ✅ Consistent Hashing Ring (TreeMap-based)
-* ✅ Virtual Nodes
-* ✅ Replication (N copies)
-* ✅ Quorum Reads/Writes
-* ✅ Partial Write Rollback
-* ✅ Retry Mechanism
-* ✅ Node Health Check (Heartbeat)
-* ✅ Failover Handling
-* ✅ Data Rebalancing
-* ✅ Read Repair
-* ✅ Anti-Entropy Background Sync
-* ✅ Node Recovery
-* ✅ LSM-inspired Storage Engine
-* ✅ MemTable + SSTable
-* ✅ Write-Ahead Log (WAL) + Crash Recovery
-* ✅ Compaction + Tombstone Deletes
-* ✅ Thread-Safe Concurrency Model
-* ✅ Metadata Persistence (H2 + JPA)
 
 ---
 
